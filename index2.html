@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./app.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-cyan-300 to-cyan-300 min-h-screen flex justify-center items-center">
+
+    <!-- Main Weather Container -->
+    <div class="w-full sm:w-4/5 lg:w-3/4 bg-white rounded-xl shadow-xl p-6 space-y-6">
+        
+        <!-- Logo and Search Bar Section -->
+        <div class="flex justify-between items-center mt-4">
+            <div class="flex items-center space-x-4">
+                <!-- Logo -->
+                
+                <h1 class="text-3xl font-bold text-cyan-400">Weather App</h1>
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="text" id="search-input" class="p-2 border rounded-l-lg text-lg" placeholder="Enter city name">
+                <button id="search-button" class="p-2 bg-cyan-500 text-white rounded-r-lg hover:bg-blue-700 text-lg">
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Current Weather Section -->
+        <div class="flex justify-between items-center border p-6 rounded-lg mt-4 bg-gradient-to-r from-cyan-500 to-cyan-400 text-white">
+            <div class="w-1/2">
+                <h3 class="text-3xl font-semibold mb-2">Current Weather</h3>
+                <p class="text-5xl font-extrabold" id="current-temp">24°C</p>
+                <p class="text-xl font-medium mt-2" id="current-description">Heavy Rain</p>
+                <div class="mt-4">
+                    <p class="text-lg">Humidity: <span id="current-humidity" class="font-semibold">85%</span></p>
+                    <p class="text-lg">Wind: <span id="current-wind" class="font-semibold">10 km/h</span></p>
+                    <p class="text-lg">Precipitation: <span id="current-precip" class="font-semibold">15 mm</span></p>
+                </div>
+            </div>
+            <div class="w-1/2">
+                <canvas id="hourlyChart" class="w-full h-48 rounded-lg shadow-xl"></canvas>
+            </div>
+        </div>
+
+        <!-- Hourly Weather Summary -->
+        <div>
+            <h4 class="text-lg font-semibold text-gray-700">Hourly Forecast</h4>
+            <div id="hourly-forecast" class="grid grid-cols-7 gap-7 mt-7">
+                <!-- Hourly forecast will be dynamically loaded here -->
+            </div>
+            <canvas id="hourlyPrecipitationChart" class="w-full h-48 mt-4"></canvas>
+        </div>
+
+        <!-- Weekly Weather Section -->
+        <div>
+            <h4 class="text-lg font-semibold text-gray-700">7 Day Forecast</h4>
+            <div class="grid grid-cols-7 gap-4 mt-4" id="weekly-forecast">
+                <!-- Weekly forecast will be dynamically loaded here -->
+            </div>
+            <canvas id="weeklyWindChart" class="w-full h-48 mt-4"></canvas>
+        </div>
+
+        <!-- 30 Day Weather Section -->
+        <div>
+            <h4 class="text-lg font-semibold text-gray-700">30 Day Forecast</h4>
+            <div class="grid grid-cols-7 gap-4 mt-4" id="thirty-day-forecast">
+                <!-- 30-day forecast will be dynamically loaded here -->
+            </div>
+            <canvas id="thirtyDayHumidityChart" class="w-full h-48 mt-4"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Sample data for weather forecast
+        const hourlyData = {
+            hours: ['9 AM', '12 PM', '3 PM', '6 PM', '9 PM', '12 AM' ],
+            temperatures: [22, 24, 26, 23, 20, 18],
+            precipitation: [5, 10, 15, 10, 20, 5], // Precipitation in mm
+            humidity: [85, 80, 75, 70, 65, 60], // Humidity in percentage
+            wind: [5, 10, 15, 12, 10, 5] // Wind speed in km/h
+        };
+
+        const weeklyData = [
+            { day: 'Mon', tempMin: 20, tempMax: 24, wind: 12, humidity: 80, precip: 5 },
+            { day: 'Tue', tempMin: 22, tempMax: 26, wind: 15, humidity: 75, precip: 10 },
+            { day: 'Wed', tempMin: 23, tempMax: 27, wind: 10, humidity: 70, precip: 8 },
+            { day: 'Thu', tempMin: 22, tempMax: 28, wind: 5, humidity: 60, precip: 3 },
+            { day: 'Fri', tempMin: 21, tempMax: 25, wind: 8, humidity: 65, precip: 2 },
+            { day: 'Sat', tempMin: 20, tempMax: 26, wind: 12, humidity: 72, precip: 7 },
+            { day: 'Sun', tempMin: 22, tempMax: 27, wind: 10, humidity: 68, precip: 6 }
+        ];
+
+        // 30-day forecast (sample data)
+        const thirtyDayData = [];
+        for (let i = 0; i < 30; i++) {
+            thirtyDayData.push({
+                day: `Day ${i + 1}`,
+                tempMin: 20 + Math.floor(Math.random() * 6),
+                tempMax: 25 + Math.floor(Math.random() * 6),
+                humidity: 60 + Math.floor(Math.random() * 20),
+                precip: Math.floor(Math.random() * 10)
+            });
+        }
+
+        // Hourly forecast chart (Temperature)
+        const hourlyTempChart = new Chart(document.getElementById('hourlyChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: hourlyData.hours,
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: hourlyData.temperatures,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: false, suggestedMin: 15, suggestedMax: 30 }
+                }
+            }
+        });
+
+        // Hourly Precipitation chart
+        const hourlyPrecipChart = new Chart(document.getElementById('hourlyPrecipitationChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: hourlyData.hours,
+                datasets: [{
+                    label: 'Precipitation (mm)',
+                    data: hourlyData.precipitation,
+                    borderColor: '#3b82f6',
+                    backgroundColor: '#60a5fa',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, suggestedMax: 20 }
+                }
+            }
+        });
+
+        // Weekly Wind Speed chart
+        const weeklyWindChart = new Chart(document.getElementById('weeklyWindChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: weeklyData.map(item => item.day),
+                datasets: [{
+                    label: 'Wind Speed (km/h)',
+                    data: weeklyData.map(item => item.wind),
+                    borderColor: '#3b82f6',
+                    backgroundColor: '#60a5fa',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, suggestedMax: 20 }
+                }
+            }
+        });
+
+        // 30-day Humidity chart
+        const thirtyDayHumidityChart = new Chart(document.getElementById('thirtyDayHumidityChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: thirtyDayData.map(item => item.day),
+                datasets: [{
+                    label: 'Humidity (%)',
+                    data: thirtyDayData.map(item => item.humidity),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: false, suggestedMin: 50, suggestedMax: 100 }
+                }
+            }
+        });
+
+        // Dynamic generation of hourly forecast
+        const hourlyForecastContainer = document.getElementById('hourly-forecast');
+        hourlyData.hours.forEach((time, index) => {
+            const forecastCard = document.createElement('div');
+            forecastCard.classList.add('bg-cyan-300', 'p-4', 'rounded-lg', 'text-center');
+            forecastCard.innerHTML = `
+                <p class="font-semibold">${time}</p>
+                <p class="text-gray-500">${hourlyData.temperatures[index]}°C</p>
+                <p class="text-gray-500">Humidity: ${hourlyData.humidity[index]}%</p>
+                <p class="text-gray-500">Wind: ${hourlyData.wind[index]} km/h</p>
+                <p class="text-gray-500">Precipitation: ${hourlyData.precipitation[index]} mm</p>
+            `;
+            hourlyForecastContainer.appendChild(forecastCard);
+        });
+
+        // Dynamic generation of weekly forecast
+        const weeklyForecastContainer = document.getElementById('weekly-forecast');
+        weeklyData.forEach(item => {
+            const forecastCard = document.createElement('div');
+            forecastCard.classList.add('bg-cyan-300', 'p-4', 'rounded-lg', 'text-center');
+            forecastCard.innerHTML = `
+                <p class="font-semibold">${item.day}</p>
+                <p class="text-gray-500">${item.tempMax}°C / ${item.tempMin}°C</p>
+                <p class="text-gray-500">Wind: ${item.wind} km/h</p>
+                <p class="text-gray-500">Precip: ${item.precip} mm</p>
+            `;
+            weeklyForecastContainer.appendChild(forecastCard);
+        });
+
+        // Dynamic generation of 30-day forecast
+        const thirtyDayForecastContainer = document.getElementById('thirty-day-forecast');
+        thirtyDayData.forEach(item => {
+            const forecastCard = document.createElement('div');
+            forecastCard.classList.add('bg-cyan-300', 'p-4', 'rounded-lg', 'text-center');
+            forecastCard.innerHTML = `
+                <p class="font-semibold">${item.day}</p>
+                <p class="text-gray-500">${item.tempMax}°C / ${item.tempMin}°C</p>
+                <p class="text-gray-500">Humidity: ${item.humidity}%</p>
+                <p class="text-gray-500">Precipitation: ${item.precip} mm</p>
+            `;
+            thirtyDayForecastContainer.appendChild(forecastCard);
+        });
+
+    </script>
+
+</body>
+</html>
